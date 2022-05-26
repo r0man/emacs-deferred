@@ -1,36 +1,59 @@
-EMACS ?= emacs
-CASK ?= cask
+# * makem.sh/Makefile --- Script to aid building and testing Emacs Lisp packages
 
-.PHONY: test test-deferred test-concurrent compile clean print-deps travis-ci
+# URL: https://github.com/alphapapa/makem.sh
+# Version: 0.5
 
-test: test-deferred test-deferred-compiled test-concurrent
-# test-concurrent-compiled
+# * Arguments
 
-test-deferred:
-	$(CASK) exec ert-runner test/deferred-test.el
+# For consistency, we use only var=val options, not hyphen-prefixed options.
 
-test-deferred-compiled: deferred.elc
-	$(CASK) exec ert-runner test/deferred-test.el -l deferred.elc
+# NOTE: I don't like duplicating the arguments here and in makem.sh,
+# but I haven't been able to find a way to pass arguments which
+# conflict with Make's own arguments through Make to the script.
+# Using -- doesn't seem to do it.
 
-test-concurrent:
-	$(CASK) exec ert-runner test/concurrent-test.el
+ifdef install-deps
+	INSTALL_DEPS = "--install-deps"
+endif
+ifdef install-linters
+	INSTALL_LINTERS = "--install-linters"
+endif
 
-test-concurrent-compiled: concurrent.elc
-	$(CASK) exec ert-runner test/concurrent-test.el -l concurrent.elc
+ifdef sandbox
+	ifeq ($(sandbox), t)
+		SANDBOX = --sandbox
+	else
+		SANDBOX = --sandbox=$(sandbox)
+	endif
+endif
 
-compile: deferred.elc concurrent.elc
+ifdef debug
+	DEBUG = "--debug"
+endif
 
-%.elc: %.el
-	$(EMACS) -batch -L . -f batch-byte-compile $<
+# ** Verbosity
 
-clean:
-	rm -rfv *.elc
+# Since the "-v" in "make -v" gets intercepted by Make itself, we have
+# to use a variable.
 
-print-deps:
-	@echo "----------------------- Dependencies -----------------------"
-	$(EMACS) --version
-	@echo "------------------------------------------------------------"
+verbose = $(v)
 
-travis-ci: print-deps
-	$(MAKE) clean test
-	$(MAKE) compile test
+ifneq (,$(findstring vvv,$(verbose)))
+	VERBOSE = "-vvv"
+else ifneq (,$(findstring vv,$(verbose)))
+	VERBOSE = "-vv"
+else ifneq (,$(findstring v,$(verbose)))
+	VERBOSE = "-v"
+endif
+
+# * Rules
+
+# TODO: Handle cases in which "test" or "tests" are called and a
+# directory by that name exists, which can confuse Make.
+
+%:
+	@./makem.sh $(DEBUG) $(VERBOSE) $(SANDBOX) $(INSTALL_DEPS) $(INSTALL_LINTERS) $(@)
+
+.DEFAULT: init
+init:
+	@./makem.sh $(DEBUG) $(VERBOSE) $(SANDBOX) $(INSTALL_DEPS) $(INSTALL_LINTERS)
