@@ -44,10 +44,6 @@ jobs:
           - '26.2'
           - '26.3'
           - 'snapshot'
-        cask_version:
-          - '0.8.0'
-          - '0.8.4'
-          - 'snapshot'
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v2
@@ -59,8 +55,6 @@ jobs:
           version: ${{ matrix.emacs_version }}
 
       - uses: conao3/setup-cask@master
-        with:
-          version: 'snapshot'
 
       - name: Run tests
         run: make
